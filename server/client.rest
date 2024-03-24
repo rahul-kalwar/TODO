@@ -9,5 +9,3 @@ Content-Type: application/json
     "description": "Test from Rahul"
 }
 
-### Delete task
-DELETE http://localhost:3001/delete/17
