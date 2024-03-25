@@ -1,63 +1,69 @@
-const BACKEND_ROOT_URL = 'http://localhost:3001';
 import { Todos } from './class/Todos.js';
 
+const BACKEND_ROOT_URL = 'http://localhost:3001';
 const todos = new Todos(BACKEND_ROOT_URL);
 
-const list = document.querySelector('ul');
-const input = document.querySelector('input');
+const list = document.querySelector('.list-group');
+const input = document.querySelector('.form-control');
 
 input.disabled = true;
 
 const renderTask = (task) => {
     const li = document.createElement('li');
-    li.setAttribute('class', 'list-group-item');
-    li.innerHTML = task.getText(); 
+    li.setAttribute('class', 'list-group-item d-flex justify-content-between align-items-center');
+    li.setAttribute('data-key', task.getId().toString());
+    li.innerHTML = `
+        <span>${task.getText()}</span>
+        <button type="button" class="btn btn-sm btn-danger delete-task"><i class="fas fa-trash-alt"></i></button>
+    `;
     list.appendChild(li);
+
+    // Added event listener for delete task
+    const deleteButton = li.querySelector('.delete-task');
+    deleteButton.addEventListener('click', async (event) => {
+        event.preventDefault();
+        try {
+            await todos.removeTask(task.getId());
+            li.remove();
+        } catch (error) {
+            console.error(error);
+        }
+    });
 }
 
 const getTasks = () => {
-    todos.getTasks().then((tasks) => {
-        tasks.forEach(task => {
-            renderTask(task)
+    todos.getTasks()
+        .then((tasks) => {
+            tasks.forEach(task => {
+                renderTask(task);
+            });
+            input.disabled = false;
         })
-        input.disabled = false;
-    }).catch ((error) =>{
-        alert(error)
-    })
+        .catch((error) => {
+            console.error(error);
+            alert('Failed to fetch tasks. Please try again.');
+        });
 }
 
-const saveTask = async (task) => {
+const saveTask = async (taskText) => {
     try {
-        const response = await fetch(`${BACKEND_ROOT_URL}/new`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ description: task })
-        });
-        if (!response.ok) {
-            throw new Error('Failed to save task');
-        }
-        const data = await response.json();
-        renderTask(data);
+        const newTask = await todos.addTask(taskText);
+        renderTask(newTask);
         input.value = '';
     } catch (error) {
         console.error(error);
+        alert('Failed to add task. Please try again.');
     }
 }
 
-
-
-input.addEventListener('keypress', (event) => {
+input.addEventListener('keypress', async (event) => {
     if (event.key === 'Enter') {
         event.preventDefault();
-        const task = input.value.trim();
-        if (task !== '') {
-            todos.addTask(task).then((task) => {
-                renderTask(task)
-                input.value = '';
-            })
-        }    
+        const taskText = input.value.trim();
+        if (taskText !== '') {
+            await saveTask(taskText);
+        }
     }
 });
+
 getTasks();
